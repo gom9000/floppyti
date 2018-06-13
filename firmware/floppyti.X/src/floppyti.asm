@@ -7,27 +7,42 @@
 ;  \______  /\____/_______  / /____//______  /
 ;         \/              \/               \/
 ; Copyright (c) 2014 by Alessandro Fraschetti.
-; All Rights Reserved.
 ;
 ; Description: floppyti. Floppy, fottiti!
-; Input......:
-; Output.....:
+; Target.....: Microchip PIC 14F628A Microcontroller
+; Compiler...: Microchip Assembler (MPASM)
 ; Note.......:
+;
+; MIT License
+; Permission is hereby granted, free of charge, to any person obtaining a copy
+; of this software and associated documentation files (the "Software"), to deal
+; in the Software without restriction, including without limitation the rights
+; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+; copies of the Software, and to permit persons to whom the Software is
+; furnished to do so, subject to the following conditions:
+;
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+; SOFTWARE.
 ;=============================================================================
 
         processor   16f628a
         #include    <p16f628a.inc>
-      ;  __config  	_CP_OFF & _CPD_OFF & _BODEN_OFF & _LVP_OFF & _WDT_OFF & _PWRTE_ON & _HS_OSC
+      ;  __config   _CP_OFF & _CPD_OFF & _BODEN_OFF & _LVP_OFF & _WDT_OFF & _PWRTE_ON & _HS_OSC
       ;  __CONFIG   _CP_OFF & _DATA_CP_OFF & _LVP_OFF & _BOREN_OFF & _MCLRE_OFF & _WDT_OFF & _PWRTE_ON & _INTOSC_OSC_NOCLKOUT
       ;  __CONFIG    _CP_OFF & _DATA_CP_OFF & _LVP_OFF & _BOREN_OFF & _WDT_OFF & _MCLRE_ON & _PWRTE_ON & _HS_OSC
         __CONFIG    _CP_OFF & _LVP_OFF & _BOREN_OFF & _WDT_OFF & _MCLRE_OFF & _PWRTE_ON & _HS_OSC
-					; _CP_[ON/OFF]    : code protect program memory enable/disable
-					; _CPD_[ON/OFF]   : code protect data memory enable/disable
-					; _LVP_[ON/OFF]   : Low Voltage ICSP enable/disable
-					; _BODEN_[ON/OFF] : Brown-Out Reset enable/disable
-					; _WDT_[ON/OFF]   : watchdog timer enable/disable
-					; _MCLRE_[ON/OFF] : MCLR pin function  digital IO/MCLR 
-					; _PWRTE_[ON/OFF] : power-up timer enable/disable
+                    ; _CP_[ON/OFF]    : code protect program memory enable/disable
+                    ; _CPD_[ON/OFF]   : code protect data memory enable/disable
+                    ; _LVP_[ON/OFF]   : Low Voltage ICSP enable/disable
+                    ; _BODEN_[ON/OFF] : Brown-Out Reset enable/disable
+                    ; _WDT_[ON/OFF]   : watchdog timer enable/disable
+                    ; _MCLRE_[ON/OFF] : MCLR pin function  digital IO/MCLR
+                    ; _PWRTE_[ON/OFF] : power-up timer enable/disable
 ;=============================================================================
 
 ;=============================================================================
@@ -44,8 +59,8 @@ IN          equ     RB1
 OACTIVITY   equ     RB3
 
 ; midiIOStatus Flags
-INDATA      equ		0x00
-OUTDATA     equ		0x01
+INDATA      equ     0x00
+OUTDATA     equ     0x01
 
 ; messageStatusByte Flags
 STATUSBYTE  equ     0x00
@@ -54,18 +69,18 @@ DATABYTE2   equ     0x02
 NOTEON      equ     0x04
 
 ; fddStatus Flags
-DIRFLAG		equ		0x04
+DIRFLAG     equ     0x04
 ;=============================================================================
 
 ;=============================================================================
 ;  File register use
 ;=============================================================================
-		cblock		h'20'
-			w_temp						; variable used for context saving
-			status_temp					; variable used for context saving
+        cblock      h'20'
+            w_temp                      ; variable used for context saving
+            status_temp                 ; variable used for context saving
             pclath_temp                 ; variable used for context saving
 
-            d1, d2, d3					; delay routine vars
+            d1, d2, d3                  ; delay routine vars
 
             midiInByte                  ; midi-in Byte Register
             midiIOStatus                ; midi-in/out Status Register
@@ -79,23 +94,23 @@ DIRFLAG		equ		0x04
             noteOnCounter               ; midi notes-on counter
             noteToPlay                  ; midi note to play out
 
-			fddStatus					; fdd status register
+            fddStatus                   ; fdd status register
             tickCounter                 ; counter for note task execution
             outputStatus                ; output (on/off) status register
-		endc
+        endc
 ;=============================================================================
 
 ;=============================================================================
 ;  Start of code
 ;=============================================================================
 ;start
-		org			h'0000'				; processor reset vector
-		goto		main				; jump to the main routine
+        org         h'0000'             ; processor reset vector
+        goto        main                ; jump to the main routine
 
-		org			h'0004'				; interrupt vector location
-		movwf		w_temp				; save off current W register contents
-		movf		STATUS, W			; move status register into W register
-		movwf		status_temp			; save off contents of STATUS register
+        org         h'0004'             ; interrupt vector location
+        movwf       w_temp              ; save off current W register contents
+        movf        STATUS, W           ; move status register into W register
+        movwf       status_temp         ; save off contents of STATUS register
         movf        PCLATH, W           ; move pclath register into W register
         movwf       pclath_temp         ; save off contents of PCLATH register
 
@@ -103,61 +118,61 @@ DIRFLAG		equ		0x04
 
         movf        pclath_temp, W      ; retrieve copy of PCLATH register
         movwf       PCLATH              ; restore pre-isr PCLATH register contents
-		movf		status_temp, W		; retrieve copy of STATUS register
-		movwf		STATUS				; restore pre-isr STATUS register contents
-		swapf		w_temp, F
-		swapf		w_temp, W			; restore pre-isr W register contents
-		retfie							; return from interrupt
+        movf        status_temp, W      ; retrieve copy of STATUS register
+        movwf       STATUS              ; restore pre-isr STATUS register contents
+        swapf       w_temp, F
+        swapf       w_temp, W           ; restore pre-isr W register contents
+        retfie                          ; return from interrupt
 ;=============================================================================
 
 ;=============================================================================
 ;  Init I/O ports
 ;=============================================================================
 init_ports
-		errorlevel	-302
+        errorlevel  -302
 
         ; set PORTA (RA0-RA7) as:
         ;   RA2 Out=DIR, RA3 Out=STEP, RA4 Out=DRVSEL
-  		bcf			STATUS, RP0				; select Bank0
-  		clrf		PORTA					; initialize PORTA by clearing output data latches
+        bcf         STATUS, RP0             ; select Bank0
+        clrf        PORTA                   ; initialize PORTA by clearing output data latches
         movlw       h'07'                   ; turn comparators off
         movwf       CMCON                   ; and set port A mode I/O digital
-  		bsf			STATUS, RP0				; select Bank1
-  		movlw		b'11100000'				; PORTA input/output
-  		movwf		TRISA
+        bsf         STATUS, RP0             ; select Bank1
+        movlw       b'11100000'             ; PORTA input/output
+        movwf       TRISA
 
-  		; set PORTB (RB0-RB3) as:
+        ; set PORTB (RB0-RB3) as:
         ;   Out=IN Activity, In=MIDI-IN, Out= -, Out=OUT Activity
         ; set PORTB (RB4-RB7) as:
         ;   All-Input=MIDI-IN CHANNEL
-  		bcf			STATUS, RP0				; select Bank0
-  		clrf		PORTB					; initialize PORTB by clearing output data latches
-  		bsf			STATUS, RP0				; select Bank1
-  		movlw		b'11110010'				; PORTB input/output
-  		movwf		TRISB
+        bcf         STATUS, RP0             ; select Bank0
+        clrf        PORTB                   ; initialize PORTB by clearing output data latches
+        bsf         STATUS, RP0             ; select Bank1
+        movlw       b'11110010'             ; PORTB input/output
+        movwf       TRISB
 
-        bcf			STATUS, RP0				; select Bank0
+        bcf         STATUS, RP0             ; select Bank0
 
-		errorlevel  +302
+        errorlevel  +302
 
-  		return
+        return
 ;=============================================================================
 
 ;=============================================================================
 ;  Init USART
 ;=============================================================================
 init_usart
-        errorlevel	-302
+        errorlevel  -302
 
-        bsf			STATUS, RP0				; select Bank1
-        movlw   	h'09'             		; 31250 bauds on 20MHz osc.
-        movwf   	SPBRG
-        movlw   	b'00000000'     		; async tx 8 bit
-        movwf   	TXSTA
-        bcf     	STATUS, RP0             ; return to page 0
-        movlw   	b'10010000'    			; async rx 8 bit
-        movwf   	RCSTA
-        bcf			STATUS, RP0				; select Bank0
+        bsf         STATUS, RP0             ; select Bank1
+        movlw       h'09'                   ; 31250 bauds on 20MHz osc.
+        movwf       SPBRG
+        movlw       b'00000000'             ; async tx 8 bit
+        movwf       TXSTA
+        bcf         STATUS, RP0             ; return to page 0
+        movlw       b'10010000'             ; async rx 8 bit
+        movwf       RCSTA
+        bcf         STATUS, RP0             ; select Bank0
 
         errorlevel  +302
 
@@ -168,20 +183,20 @@ init_usart
 ;  Init Timer0 (internal clock source)
 ;=============================================================================
 init_timer
-        errorlevel	-302
+        errorlevel  -302
 
         ; Clear the Timer0 registers
-        bcf			STATUS, RP0				; select Bank0
+        bcf         STATUS, RP0             ; select Bank0
         clrf        TMR0                    ; clear module register
 
         ; Disable interrupts
         bcf         INTCON, T0IE            ; mask timer interrupt
 
         ; Set the Timer0 control register
-        bsf			STATUS, RP0				; select Bank1
+        bsf         STATUS, RP0             ; select Bank1
         movlw       b'10000000'             ; setup prescaler (0) and timer
         movwf       OPTION_REG
-        bcf			STATUS, RP0				; select Bank0
+        bcf         STATUS, RP0             ; select Bank0
 
         errorlevel  +302
 
@@ -337,7 +352,7 @@ octave10
 ;  Delay routines
 ;=============================================================================
 delay1ms
-        movlw       0xC6					; 993 cycles
+        movlw       0xC6                    ; 993 cycles
         movwf       d1
         movlw       0x01
         movwf       d2
@@ -346,9 +361,9 @@ delay1ms_0
         goto        $+2
         decfsz      d2, f
         goto        delay1ms_0
-        goto        $+1						; 3 cycles
+        goto        $+1                     ; 3 cycles
         nop
-        return								; 4 cycles (including call)
+        return                              ; 4 cycles (including call)
 ;=============================================================================
 delay500ms                                  ;2499992 cycles
         movlw       0x15
@@ -392,9 +407,9 @@ step_in
 ;  Tasks Routines
 ;=============================================================================
 scan_midi_in_listen_channel
-		movf 		COMM, W
-        andlw		b'11110000'
-        movwf 		midiInListenChannel
+        movf        COMM, W
+        andlw       b'11110000'
+        movwf       midiInListenChannel
         rrf         midiInListenChannel, F
         rrf         midiInListenChannel, F
         rrf         midiInListenChannel, F
@@ -402,22 +417,22 @@ scan_midi_in_listen_channel
         return
 ;=============================================================================
 scan_midi_in_data
-		bcf			midiIOStatus, INDATA    ; clear midi-in status flag
+        bcf         midiIOStatus, INDATA    ; clear midi-in status flag
         btfss       RCSTA, OERR
         goto        $+3
         bcf         RCSTA, CREN
         bsf         RCSTA, CREN
-		btfss		PIR1, RCIF				; test for incoming data
-		return
-		bsf			COMM, IACTIVITY         ; turn on activity led
-        movf		RCREG, W                ; set midi-in Byte Register
-		movwf		midiInByte              ;
-		bsf			midiIOStatus, INDATA    ; set midi-in status flag
-        bcf			COMM, IACTIVITY         ; turn off activity led
-		return
+        btfss       PIR1, RCIF              ; test for incoming data
+        return
+        bsf         COMM, IACTIVITY         ; turn on activity led
+        movf        RCREG, W                ; set midi-in Byte Register
+        movwf       midiInByte              ;
+        bsf         midiIOStatus, INDATA    ; set midi-in status flag
+        bcf         COMM, IACTIVITY         ; turn off activity led
+        return
 ;=============================================================================
 create_midi_in_message
-        movf		midiInByte, W           ; test for statusbyte
+        movf        midiInByte, W           ; test for statusbyte
         andlw       b'10001111'
         sublw       b'10000000' ;;; todo test midi listen channel...
         btfsc       STATUS, Z
@@ -435,9 +450,9 @@ check_statusbyte
         clrf        msgDataByte2
         movf        midiInByte, W           ; save midi byte on data register
         andlw       b'11110000'
-        movwf		msgStatusByte
+        movwf       msgStatusByte
 check_note_on
-        movf		msgStatusByte, W        ; test for note on
+        movf        msgStatusByte, W        ; test for note on
         sublw       b'10010000'
         btfss       STATUS, Z
         goto        check_note_off
@@ -445,7 +460,7 @@ check_note_on
         bsf         msgStatus, NOTEON
         return
 check_note_off
-        movf		msgStatusByte, W        ; test for note off
+        movf        msgStatusByte, W        ; test for note off
         sublw       b'10000000'
         btfss       STATUS, Z
         goto        check_others
@@ -456,12 +471,12 @@ check_others
         return
 check_databyte1
         movf        midiInByte, W           ; save midi byte on data
-        movwf		msgDataByte1            ; and status registers
+        movwf       msgDataByte1            ; and status registers
         bsf         msgStatus, DATABYTE1
         return
 check_databyte2
         movf        midiInByte, W           ; save midi byte on data
-        movwf		msgDataByte2            ; and status registers
+        movwf       msgDataByte2            ; and status registers
         bsf         msgStatus, DATABYTE2
         return
 ;=============================================================================
@@ -479,7 +494,7 @@ parse_note_on
         clrf        msgStatus
         incf        noteOnCounter, F        ; do note on
         movf        msgDataByte1, W
-        movwf		noteToPlay
+        movwf       noteToPlay
         return
 parse_note_off
         clrf        msgStatus
@@ -487,7 +502,7 @@ parse_note_off
         btfss       STATUS, Z
         decfsz      noteOnCounter, F        ; do note off
         return
-        clrf		noteToPlay
+        clrf        noteToPlay
         return
 ;=============================================================================
 output_fdd_note
@@ -505,7 +520,7 @@ output_fdd_note
 ;  main routine
 ;=============================================================================
 main
-		call 		init_ports              ; init devices
+        call        init_ports              ; init devices
 
         clrf        msgStatus               ; clean data and status registers
         clrf        msgStatusByte
@@ -528,13 +543,13 @@ post
         bcf         COMM, OACTIVITY
 ;        bsf         FDD, DRVSEL
 
-		call		init_usart
+        call        init_usart
         call        init_timer
 
 ;==== tasks scheduler ========================================================
 schedulerloop
         btfss       INTCON, T0IF            ; timer overflow (51.2us)?
-        goto        schedulerloop			; no, loop!
+        goto        schedulerloop           ; no, loop!
         bcf         INTCON, T0IF            ; reset overflow flag
 
 ; --  scan input -------------------------------------------------------------
@@ -544,7 +559,7 @@ task1
 
 ; --  parse midi-in data -----------------------------------------------------
 task2
-        btfsc		midiIOStatus, INDATA
+        btfsc       midiIOStatus, INDATA
         call        create_midi_in_message
         btfsc       msgStatus, STATUSBYTE
         call        parse_midi_in_message
