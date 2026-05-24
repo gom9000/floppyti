@@ -5,7 +5,10 @@
 
 A floppy-drive music player driven by MIDI-IN interface.
 
-![built.jpg](cfloppyti_built.jpg)
+![built.jpg](media/floppyti_built_front.jpeg)
+![rear](media/floppyti_built_rear.jpeg)
+![inside](media/floppyti_built_inside.jpeg)
+
 
 ## Overview
 Floppyti is a bare-metal hardware solution designed to transform a common 3.5-inch floppy disk drive into a monophonic musical instrument. The system intercepts MIDI-IN messages and translates them into stepper motor movement sequences, generating musical notes through the mechanical vibrations of the drive's head.
