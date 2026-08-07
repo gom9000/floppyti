@@ -1,5 +1,5 @@
 ;=============================================================================
-; @(#)floppyti.asm  0.1  2014/04/23
+; @(#)floppyti.asm  0.2  2014/04/23
 ;   ________        _________________.________
 ;  /  _____/  ____ /   _____/   __   \   ____/
 ; /   \  ___ /  _ \\_____  \\____    /____  \
@@ -9,7 +9,7 @@
 ; Copyright (c) 2014 by Alessandro Fraschetti.
 ;
 ; Description: floppyti. Floppy, fottiti!
-; Target.....: Microchip PIC 14F628A Microcontroller
+; Target.....: Microchip PIC 16F628A Microcontroller
 ; Compiler...: Microchip Assembler (MPASM)
 ; Note.......:
 ;
@@ -48,11 +48,20 @@
 ;=============================================================================
 ;  Manifest constants
 ;=============================================================================
+; FDD Consts
 FDD         equ     PORTA
 DIR         equ     RA2
 STEP        equ     RA3
 DRVSEL      equ     RA4
+FDDRANGE    equ	    .1
+HOMESTEPS   equ     .90
+CENTERSTEPS equ     .40
 
+
+; Config Consts
+DIPSW	    equ	    PORTB
+
+; Midi Consts
 COMM        equ     PORTB
 IACTIVITY   equ     RB0
 IN          equ     RB1
@@ -81,6 +90,7 @@ DIRFLAG     equ     0x04
             pclath_temp                 ; variable used for context saving
 
             d1, d2, d3                  ; delay routine vars
+	    d4
 
             midiInByte                  ; midi-in Byte Register
             midiIOStatus                ; midi-in/out Status Register
@@ -95,6 +105,7 @@ DIRFLAG     equ     0x04
             noteToPlay                  ; midi note to play out
 
             fddStatus                   ; fdd status register
+	    fddPos                      ; fdd head pos within the sweep range
             tickCounter                 ; counter for note task execution
             outputStatus                ; output (on/off) status register
         endc
@@ -194,7 +205,7 @@ init_timer
 
         ; Set the Timer0 control register
         bsf         STATUS, RP0             ; select Bank1
-        movlw       b'10000000'             ; setup prescaler (0) and timer
+        movlw       b'10001000'             ; setup prescaler and timer
         movwf       OPTION_REG
         bcf         STATUS, RP0             ; select Bank0
 
@@ -210,142 +221,144 @@ init_timer
 note_to_ticks_decode
         addwf       PCL, F
 octave0
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
+        retlw       d'255'  ; C0 (16.35Hz)
+        retlw       d'255'  ; C#0 (17.32Hz)
+        retlw       d'255'  ; D0 (18.35Hz)
+        retlw       d'255'  ; D#0 (19.45Hz)
+        retlw       d'255'  ; E0 (20.60Hz)
+        retlw       d'255'  ; F0 (21.83Hz)
+        retlw       d'255'  ; F#0 (23.12Hz)
+        retlw       d'255'  ; G0 (24.50Hz)
+        retlw       d'255'  ; G#0 (25.96Hz)
+        retlw       d'255'  ; A0 (27.50Hz)
+        retlw       d'255'  ; A#0 (29.14Hz)
+        retlw       d'255'  ; B0 (30.87Hz)
 octave1
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
+        retlw       d'255'  ; C1 (32.70Hz)
+        retlw       d'255'  ; C#1 (34.65Hz)
+        retlw       d'255'  ; D1 (36.71Hz)
+        retlw       d'255'  ; D#1 (38.89Hz)
+        retlw       d'255'  ; E1 (41.20Hz)
+        retlw       d'255'  ; F1 (43.65Hz)
+        retlw       d'255'  ; F#1 (46.25Hz)
+        retlw       d'255'  ; G1 (49.00Hz)
+        retlw       d'255'  ; G#1 (51.91Hz)
+        retlw       d'255'  ; A1 (55.00Hz)
+        retlw       d'255'  ; A#1 (58.27Hz)
+        retlw       d'255'  ; B1 (61.74Hz)
 octave2
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'255'
-        retlw       d'251'
-        retlw       d'237'
-        retlw       d'224'
-        retlw       d'211'
-        retlw       d'199'
-        retlw       d'188'
-        retlw       d'178'
-        retlw       d'168'
-        retlw       d'158'
+        retlw       d'255'  ; C2 (65.41Hz)
+        retlw       d'255'  ; C#2 (69.30Hz)
+        retlw       d'255'  ; D2 (73.42Hz)
+        retlw       d'251'  ; D#2 (77.78Hz)
+        retlw       d'237'  ; E2 (82.41Hz)
+        retlw       d'224'  ; F2 (87.31Hz)
+        retlw       d'211'  ; F#2 (92.50Hz)
+        retlw       d'199'  ; G2 (98.00Hz)
+        retlw       d'188'  ; G#2 (103.83Hz)
+        retlw       d'178'  ; A2 (110.00Hz)
+        retlw       d'168'  ; A#2 (116.54Hz)
+        retlw       d'158'  ; B2 (123.47Hz)
 octave3
-        retlw       d'149'  ;130.81Hz
-        retlw       d'141'
-        retlw       d'133'
-        retlw       d'126'
-        retlw       d'119'
-        retlw       d'112'
-        retlw       d'106'
-        retlw       d'100'
-        retlw       d'94'
-        retlw       d'89'
-        retlw       d'83'
-        retlw       d'79'
+        retlw       d'149'  ; C3 (130.81Hz)
+        retlw       d'141'  ; C#3 (138.59Hz)
+        retlw       d'133'  ; D3 (146.83Hz)
+        retlw       d'126'  ; D#3 (155.56Hz)
+        retlw       d'119'  ; E3 (164.81Hz)
+        retlw       d'112'  ; F3 (174.61Hz)
+        retlw       d'106'  ; F#3 (185.00Hz)
+        retlw       d'100'  ; G3 (196.00Hz)
+        retlw       d'94'   ; G#3 (207.65Hz)
+        retlw       d'89'   ; A3 (220.00Hz)
+        retlw       d'84'   ; A#3 (233.08Hz)
+        retlw       d'79'   ; B3 (246.94Hz)
 octave4
-        retlw       d'75'
-        retlw       d'70'
-        retlw       d'67'
-        retlw       d'63'
-        retlw       d'59'
-        retlw       d'56'
-        retlw       d'53'
-        retlw       d'50'
-        retlw       d'47'
-        retlw       d'44'   ; 440Hz
-        retlw       d'42'
-        retlw       d'40'
+        retlw       d'75'   ; C4 (261.63Hz)
+        retlw       d'70'   ; C#4 (277.18Hz)
+        retlw       d'67'   ; D4 (293.66Hz)
+        retlw       d'63'   ; D#4 (311.13Hz)
+        retlw       d'59'   ; E4 (329.63Hz)
+        retlw       d'56'   ; F4 (349.23Hz)
+        retlw       d'53'   ; F#4 (369.99Hz)
+        retlw       d'50'   ; G4 (392.00Hz)
+        retlw       d'47'   ; G#4 (415.30Hz)
+        retlw       d'44'   ; A4 (440.00Hz)
+        retlw       d'42'   ; A#4 (466.16Hz)
+        retlw       d'40'   ; B4 (493.88Hz)
 octave5
-        retlw       d'37'
-        retlw       d'35'
-        retlw       d'33'
-        retlw       d'32'
-        retlw       d'30'
-        retlw       d'28'
-        retlw       d'26'
-        retlw       d'25'
-        retlw       d'24'
-        retlw       d'22'
-        retlw       d'21'
-        retlw       d'20'
+        retlw       d'37'   ; C5 (523.25Hz)
+        retlw       d'35'   ; C#5 (554.37Hz)
+        retlw       d'33'   ; D5 (587.33Hz)
+        retlw       d'31'   ; D#5 (622.25Hz)
+        retlw       d'30'   ; E5 (659.26Hz)
+        retlw       d'28'   ; F5 (698.46Hz)
+        retlw       d'26'   ; F#5 (739.99Hz)
+        retlw       d'25'   ; G5 (783.99Hz)
+        retlw       d'24'   ; G#5 (830.61Hz)
+        retlw       d'22'   ; A5 (880.00Hz)
+        retlw       d'21'   ; A#5 (932.33Hz)
+        retlw       d'20'   ; B5 (987.77Hz)
 octave6
+        retlw       d'19'   ; C6 (1046.50Hz)
+        retlw       d'18'   ; C#6 (1108.73Hz)
+        retlw       d'17'   ; D6 (1174.66Hz)
+        retlw       d'16'   ; D#6 (1244.51Hz)
+        retlw       d'15'   ; E6 (1318.51Hz)
+        retlw       d'14'   ; F6 (1396.91Hz)
+        retlw       d'13'   ; F#6 (1479.98Hz)
+        retlw       d'12'   ; G6 (1567.98Hz)
+        retlw       d'12'   ; G#6 (1661.22Hz)
+        retlw       d'11'   ; A6 (1760.00Hz)
+        retlw       d'10'   ; A#6 (1864.66Hz)
+        retlw       d'10'   ; B6 (1975.53Hz)
+octave7                     ; same as octave6
         retlw       d'19'
         retlw       d'18'
         retlw       d'17'
         retlw       d'16'
         retlw       d'15'
         retlw       d'14'
-        retlw       d'14'
+        retlw       d'13'
         retlw       d'12'
         retlw       d'12'
         retlw       d'11'
         retlw       d'10'
         retlw       d'10'
-octave7
+octave8                     ; same as octave6
         retlw       d'19'
         retlw       d'18'
         retlw       d'17'
         retlw       d'16'
         retlw       d'15'
         retlw       d'14'
-        retlw       d'14'
+        retlw       d'13'
         retlw       d'12'
         retlw       d'12'
         retlw       d'11'
         retlw       d'10'
         retlw       d'10'
-octave8
+octave9                     ; same as octave6
         retlw       d'19'
         retlw       d'18'
         retlw       d'17'
         retlw       d'16'
         retlw       d'15'
         retlw       d'14'
-        retlw       d'14'
+        retlw       d'13'
         retlw       d'12'
         retlw       d'12'
         retlw       d'11'
         retlw       d'10'
         retlw       d'10'
-octave9
+octave10                    ; same as octave6
         retlw       d'19'
         retlw       d'18'
         retlw       d'17'
         retlw       d'16'
         retlw       d'15'
         retlw       d'14'
-        retlw       d'14'
+        retlw       d'13'
         retlw       d'12'
-        retlw       d'12'
-        retlw       d'11'
-        retlw       d'10'
-        retlw       d'10'
-octave10
-        retlw       d'19'
-        retlw       d'18'
-        retlw       d'17'
-        retlw       d'16'
-        retlw       d'15'
-        retlw       d'14'
 ;=============================================================================
 
 ;=============================================================================
@@ -388,17 +401,54 @@ delay500ms_0
 ;=============================================================================
 ;  FDD Routines
 ;=============================================================================
+center_fdd
+        movlw       HOMESTEPS
+        movwf       d4
+home_loop
+        call        step_out
+        call        delay1ms
+	call        delay1ms
+        decfsz      d4, F
+        goto        home_loop
+        call        delay1ms
+        movlw       CENTERSTEPS
+        movwf       d4
+center_loop
+        call        step_in
+        call        delay1ms
+	call        delay1ms
+        decfsz      d4, F
+        goto        center_loop
+	clrf        fddPos
+        bcf         fddStatus, DIRFLAG
+        return
+
+;=============================================================================
 step_out
-        bsf         FDD, DIR
+        bcf         FDD, DIR		    ; DIR=0 -> to track 0
+	nop
+	nop
         bsf         FDD, STEP
- ;       call        delay1ms
+ 	nop
+	nop
+	nop
+	nop
+	nop
+	nop
         bcf         FDD, STEP
         return
 ;=============================================================================
 step_in
-        bcf         FDD, DIR
+        bsf         FDD, DIR		    ; DIR=1 -> to track 79
+	nop
+	nop
         bsf         FDD, STEP
- ;       call        delay1ms
+ 	nop
+	nop
+	nop
+	nop
+	nop
+	nop
         bcf         FDD, STEP
         return
 ;=============================================================================
@@ -407,13 +457,9 @@ step_in
 ;  Tasks Routines
 ;=============================================================================
 scan_midi_in_listen_channel
-        movf        COMM, W
-        andlw       b'11110000'
+	swapf       DIPSW, W
+        andlw       b'00001111'
         movwf       midiInListenChannel
-        rrf         midiInListenChannel, F
-        rrf         midiInListenChannel, F
-        rrf         midiInListenChannel, F
-        rrf         midiInListenChannel, F
         return
 ;=============================================================================
 scan_midi_in_data
@@ -433,8 +479,8 @@ scan_midi_in_data
 ;=============================================================================
 create_midi_in_message
         movf        midiInByte, W           ; test for statusbyte
-        andlw       b'10001111'
-        sublw       b'10000000' ;;; todo test midi listen channel...
+        andlw       b'10000000'
+        sublw       b'10000000'
         btfsc       STATUS, Z
         goto        check_statusbyte        ;  is statusbyte, check data
         btfss       msgStatus, STATUSBYTE   ; test for statusbyte
@@ -443,11 +489,14 @@ create_midi_in_message
         goto        check_databyte1         ;  is databyte1, check data
         goto        check_databyte2         ;  is databyte2, check data
 check_statusbyte
-        clrf        msgStatus
-        bcf         msgStatus, STATUSBYTE
-        clrf        msgStatusByte
-        clrf        msgDataByte1
-        clrf        msgDataByte2
+	movf        midiInByte, W	    ; test midi listen channel
+        andlw       b'00001111'
+        subwf       midiInListenChannel, W
+        btfss       STATUS, Z
+	nop	    ;	goto	    check_others
+	clrf        msgStatusByte
+        bcf         msgStatus, DATABYTE1
+        bcf         msgStatus, DATABYTE2
         movf        midiInByte, W           ; save midi byte on data register
         andlw       b'11110000'
         movwf       msgStatusByte
@@ -468,6 +517,7 @@ check_note_off
         bcf         msgStatus, NOTEON
         return
 check_others
+	clrf        msgStatus
         return
 check_databyte1
         movf        midiInByte, W           ; save midi byte on data
@@ -491,13 +541,17 @@ parse_midi_in_message
         btfsc       STATUS, Z
         goto        parse_note_off
 parse_note_on
-        clrf        msgStatus
+        bcf         msgStatus, DATABYTE1
+	bcf         msgStatus, DATABYTE2
         incf        noteOnCounter, F        ; do note on
         movf        msgDataByte1, W
         movwf       noteToPlay
+	call        note_to_ticks_decode
+        movwf       tickCounter
         return
 parse_note_off
-        clrf        msgStatus
+        bcf         msgStatus, DATABYTE1
+	bcf         msgStatus, DATABYTE2
         movf        noteOnCounter, F
         btfss       STATUS, Z
         decfsz      noteOnCounter, F        ; do note off
@@ -506,13 +560,36 @@ parse_note_off
         return
 ;=============================================================================
 output_fdd_note
+;        btfsc       fddStatus, DIRFLAG
+;        goto        $+4
+;        call        step_in
+;        bsf         fddStatus, DIRFLAG
+;        goto        $+3
+;        call        step_out
+;        bcf         fddStatus, DIRFLAG
+;        return
         btfsc       fddStatus, DIRFLAG
-        goto        $+4
-        call        step_in
-        bsf         fddStatus, DIRFLAG
-        goto        $+3
-        call        step_out
-        bcf         fddStatus, DIRFLAG
+        goto        moving_in
+moving_out
+        call        step_out                ; one step further out
+        incf        fddPos, F
+        movlw       FDDRANGE
+        subwf       fddPos, W
+        btfss       STATUS, Z               ; reached the outer limit?
+        return
+        bsf         fddStatus, DIRFLAG      ; reverse dir for next call
+        return
+moving_in
+        call        step_in                 ; one step back in
+        movf        fddPos, F
+        btfsc       STATUS, Z               ; already at 0? (safety)
+        goto        at_zero
+        decf        fddPos, F
+        movf        fddPos, F
+        btfss       STATUS, Z               ; reached the inner limit (0)?
+        return
+at_zero
+        bcf         fddStatus, DIRFLAG      ; reverse dir for next call
         return
 ;=============================================================================
 
@@ -538,6 +615,7 @@ post
         bsf         COMM, OACTIVITY
         bcf         FDD, DRVSEL
         call        delay500ms
+	call	    center_fdd
         call        delay500ms
         bcf         COMM, IACTIVITY
         bcf         COMM, OACTIVITY

@@ -1,0 +1,146 @@
+MPLINK 5.09, LINKER
+Linker Map File - Created Fri Aug 07 13:06:18 2026
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x000002
+                   .cinit    romdata   0x000001    program   0x000004
+                   .org_1       code   0x000004    program   0x000318
+.config_2007_BUILD/DEFAULT/PRODUCTION/SRC/FLO       code   0x002007    program   0x000002
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x000002      
+                            0x000004    0x00018f      
+                            0x002007    0x002007      
+            400 out of 2182 program addresses used, program memory utilization is 18%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+             _.org_1_00B6   0x0000b6    program     static src\floppyti.asm         
+             _.org_1_00B9   0x0000b9    program     static src\floppyti.asm         
+             _.org_1_00C3   0x0000c3    program     static src\floppyti.asm         
+             _.org_1_00C5   0x0000c5    program     static src\floppyti.asm         
+             _.org_1_00C8   0x0000c8    program     static src\floppyti.asm         
+             _.org_1_00C9   0x0000c9    program     static src\floppyti.asm         
+             _.org_1_00FC   0x0000fc    program     static src\floppyti.asm         
+             _.org_1_0181   0x000181    program     static src\floppyti.asm         
+                  at_zero   0x00015f    program     static src\floppyti.asm         
+               center_fdd   0x0000cc    program     static src\floppyti.asm         
+              center_loop   0x0000d6    program     static src\floppyti.asm         
+          check_databyte1   0x00012c    program     static src\floppyti.asm         
+          check_databyte2   0x000130    program     static src\floppyti.asm         
+           check_note_off   0x000123    program     static src\floppyti.asm         
+            check_note_on   0x00011c    program     static src\floppyti.asm         
+             check_others   0x00012a    program     static src\floppyti.asm         
+         check_statusbyte   0x000111    program     static src\floppyti.asm         
+   create_midi_in_message   0x000107    program     static src\floppyti.asm         
+                 delay1ms   0x0000b1    program     static src\floppyti.asm         
+               delay1ms_0   0x0000b5    program     static src\floppyti.asm         
+               delay500ms   0x0000bc    program     static src\floppyti.asm         
+             delay500ms_0   0x0000c2    program     static src\floppyti.asm         
+                  endloop   0x00018f    program     static src\floppyti.asm         
+                home_loop   0x0000ce    program     static src\floppyti.asm         
+               init_ports   0x000010    program     static src\floppyti.asm         
+               init_timer   0x000028    program     static src\floppyti.asm         
+               init_usart   0x00001e    program     static src\floppyti.asm         
+                     main   0x000161    program     static src\floppyti.asm         
+                moving_in   0x000157    program     static src\floppyti.asm         
+               moving_out   0x00014f    program     static src\floppyti.asm         
+     note_to_ticks_decode   0x000030    program     static src\floppyti.asm         
+                  octave0   0x000031    program     static src\floppyti.asm         
+                  octave1   0x00003d    program     static src\floppyti.asm         
+                 octave10   0x0000a9    program     static src\floppyti.asm         
+                  octave2   0x000049    program     static src\floppyti.asm         
+                  octave3   0x000055    program     static src\floppyti.asm         
+                  octave4   0x000061    program     static src\floppyti.asm         
+                  octave5   0x00006d    program     static src\floppyti.asm         
+                  octave6   0x000079    program     static src\floppyti.asm         
+                  octave7   0x000085    program     static src\floppyti.asm         
+                  octave8   0x000091    program     static src\floppyti.asm         
+                  octave9   0x00009d    program     static src\floppyti.asm         
+          output_fdd_note   0x00014d    program     static src\floppyti.asm         
+    parse_midi_in_message   0x000134    program     static src\floppyti.asm         
+           parse_note_off   0x000145    program     static src\floppyti.asm         
+            parse_note_on   0x00013d    program     static src\floppyti.asm         
+                     post   0x00016b    program     static src\floppyti.asm         
+        scan_midi_in_data   0x0000fa    program     static src\floppyti.asm         
+scan_midi_in_listen_channel   0x0000f6    program     static src\floppyti.asm         
+            schedulerloop   0x000176    program     static src\floppyti.asm         
+                  step_in   0x0000ea    program     static src\floppyti.asm         
+                 step_out   0x0000de    program     static src\floppyti.asm         
+                    task1   0x000179    program     static src\floppyti.asm         
+                    task2   0x00017b    program     static src\floppyti.asm         
+                    task3   0x00017f    program     static src\floppyti.asm         
+                    task4   0x000186    program     static src\floppyti.asm         
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+               init_ports   0x000010    program     static src\floppyti.asm         
+               init_usart   0x00001e    program     static src\floppyti.asm         
+               init_timer   0x000028    program     static src\floppyti.asm         
+     note_to_ticks_decode   0x000030    program     static src\floppyti.asm         
+                  octave0   0x000031    program     static src\floppyti.asm         
+                  octave1   0x00003d    program     static src\floppyti.asm         
+                  octave2   0x000049    program     static src\floppyti.asm         
+                  octave3   0x000055    program     static src\floppyti.asm         
+                  octave4   0x000061    program     static src\floppyti.asm         
+                  octave5   0x00006d    program     static src\floppyti.asm         
+                  octave6   0x000079    program     static src\floppyti.asm         
+                  octave7   0x000085    program     static src\floppyti.asm         
+                  octave8   0x000091    program     static src\floppyti.asm         
+                  octave9   0x00009d    program     static src\floppyti.asm         
+                 octave10   0x0000a9    program     static src\floppyti.asm         
+                 delay1ms   0x0000b1    program     static src\floppyti.asm         
+               delay1ms_0   0x0000b5    program     static src\floppyti.asm         
+             _.org_1_00B6   0x0000b6    program     static src\floppyti.asm         
+             _.org_1_00B9   0x0000b9    program     static src\floppyti.asm         
+               delay500ms   0x0000bc    program     static src\floppyti.asm         
+             delay500ms_0   0x0000c2    program     static src\floppyti.asm         
+             _.org_1_00C3   0x0000c3    program     static src\floppyti.asm         
+             _.org_1_00C5   0x0000c5    program     static src\floppyti.asm         
+             _.org_1_00C8   0x0000c8    program     static src\floppyti.asm         
+             _.org_1_00C9   0x0000c9    program     static src\floppyti.asm         
+               center_fdd   0x0000cc    program     static src\floppyti.asm         
+                home_loop   0x0000ce    program     static src\floppyti.asm         
+              center_loop   0x0000d6    program     static src\floppyti.asm         
+                 step_out   0x0000de    program     static src\floppyti.asm         
+                  step_in   0x0000ea    program     static src\floppyti.asm         
+scan_midi_in_listen_channel   0x0000f6    program     static src\floppyti.asm         
+        scan_midi_in_data   0x0000fa    program     static src\floppyti.asm         
+             _.org_1_00FC   0x0000fc    program     static src\floppyti.asm         
+   create_midi_in_message   0x000107    program     static src\floppyti.asm         
+         check_statusbyte   0x000111    program     static src\floppyti.asm         
+            check_note_on   0x00011c    program     static src\floppyti.asm         
+           check_note_off   0x000123    program     static src\floppyti.asm         
+             check_others   0x00012a    program     static src\floppyti.asm         
+          check_databyte1   0x00012c    program     static src\floppyti.asm         
+          check_databyte2   0x000130    program     static src\floppyti.asm         
+    parse_midi_in_message   0x000134    program     static src\floppyti.asm         
+            parse_note_on   0x00013d    program     static src\floppyti.asm         
+           parse_note_off   0x000145    program     static src\floppyti.asm         
+          output_fdd_note   0x00014d    program     static src\floppyti.asm         
+               moving_out   0x00014f    program     static src\floppyti.asm         
+                moving_in   0x000157    program     static src\floppyti.asm         
+                  at_zero   0x00015f    program     static src\floppyti.asm         
+                     main   0x000161    program     static src\floppyti.asm         
+                     post   0x00016b    program     static src\floppyti.asm         
+            schedulerloop   0x000176    program     static src\floppyti.asm         
+                    task1   0x000179    program     static src\floppyti.asm         
+                    task2   0x00017b    program     static src\floppyti.asm         
+                    task3   0x00017f    program     static src\floppyti.asm         
+             _.org_1_0181   0x000181    program     static src\floppyti.asm         
+                    task4   0x000186    program     static src\floppyti.asm         
+                  endloop   0x00018f    program     static src\floppyti.asm         
+
+

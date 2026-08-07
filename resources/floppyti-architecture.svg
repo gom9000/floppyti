@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" width="100%" height="100%">
+  <defs>
+    <!-- Filtro Ombra Soft -->
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+
+    <!-- Gradienti Sfondi -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+
+    <linearGradient id="mcuGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <linearGradient id="soundGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+
+    <!-- Frecce -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
+
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399"/>
+    </marker>
+  </defs>
+
+  <!-- Sfondo Principale -->
+  <rect width="100%" height="100%" fill="url(#bgGradient)" rx="10"/>
+
+  <style>
+    .label { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 600; fill: #f8fafc; }
+    .subtext { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 10px; fill: #94a3b8; }
+    .bus-text { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; font-weight: bold; fill: #38bdf8; }
+    .box { rx: 6px; ry: 6px; filter: url(#shadow); }
+    .connection { stroke: #38bdf8; stroke-width: 1.75; fill: none; marker-end: url(#arrow); }
+    .connection-green { stroke: #34d399; stroke-width: 1.75; fill: none; marker-end: url(#arrow-green); }
+  </style>
+
+  <!-- 1. INPUT: MIDI-IN (Sinistra) -->
+  <g transform="translate(20, 45)">
+    <rect class="box" width="130" height="50" fill="#334155" stroke="#64748b" stroke-width="1.2"/>
+    <text x="65" y="24" class="label" font-size="13" text-anchor="middle">MIDI-IN</text>
+    <text x="65" y="38" class="subtext" text-anchor="middle">Optoisolated (31.25k baud)</text>
+  </g>
+
+  <!-- Freccia MIDI-IN -> MCU -->
+  <path d="M 150 70 L 175 70" class="connection"/>
+
+  <!-- 2. MCU CONTAINER (Centro) -->
+  <g transform="translate(175, 20)">
+    <rect class="box" width="445" height="100" fill="url(#mcuGradient)" stroke="#0284c7" stroke-width="1.5"/>
+    <text x="15" y="22" class="label" font-size="12" fill="#38bdf8">PIC16F628A MCU</text>
+    <text x="430" y="22" class="subtext" text-anchor="end">Cooperative Task Scheduler (51.2 µs)</text>
+
+    <!-- Task 1: MIDI Parser -->
+    <g transform="translate(15, 33)">
+      <rect class="box" width="120" height="52" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+      <text x="60" y="24" class="label" font-size="11" text-anchor="middle">MIDI Parser</text>
+      <text x="60" y="38" class="subtext" text-anchor="middle">Stream Parsing</text>
+    </g>
+
+    <path d="M 135 59 L 150 59" class="connection"/>
+
+    <!-- Task 2: LUT -->
+    <g transform="translate(150, 33)">
+      <rect class="box" width="130" height="52" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+      <text x="65" y="22" class="label" font-size="11" text-anchor="middle">Note-to-Period</text>
+      <text x="65" y="36" class="subtext" text-anchor="middle">Conversion (ROM LUT)</text>
+    </g>
+
+    <path d="M 280 59 L 295 59" class="connection"/>
+
+    <!-- Task 3: FDD Engine -->
+    <g transform="translate(295, 33)">
+      <rect class="box" width="135" height="52" fill="#0369a1" stroke="#38bdf8" stroke-width="1.2"/>
+      <text x="67.5" y="24" class="label" font-size="11" text-anchor="middle">FDD Synthesis Engine</text>
+      <text x="67.5" y="38" class="subtext" text-anchor="middle">Pulse Generator</text>
+    </g>
+  </g>
+
+  <!-- FRECCIA STEP / DIR (Verticale dall'FDD Engine al blocco FDD) -->
+  <path d="M 537.5 120 L 537.5 160" class="connection"/>
+  <text x="545" y="144" class="bus-text">STEP / DIR</text>
+
+  <!-- 3. FDD HEAD CARRIAGE -->
+  <g transform="translate(437.5, 160)">
+    <rect class="box" width="200" height="42" fill="#334155" stroke="#64748b" stroke-width="1.2"/>
+    <text x="100" y="20" class="label" font-size="12" text-anchor="middle">FDD Head Carriage</text>
+    <text x="100" y="33" class="subtext" text-anchor="middle">Stepper Motor Movement</text>
+  </g>
+
+  <!-- Freccia Carriage -> Vibration -->
+  <path d="M 537.5 202 L 537.5 222" class="connection"/>
+
+  <!-- 4. MECHANICAL VIBRATION -->
+  <g transform="translate(437.5, 222)">
+    <rect class="box" width="200" height="42" fill="#334155" stroke="#64748b" stroke-width="1.2"/>
+    <text x="100" y="20" class="label" font-size="12" text-anchor="middle">Mechanical Vibration</text>
+    <text x="100" y="33" class="subtext" text-anchor="middle">Chassis Resonances</text>
+  </g>
+
+  <!-- Freccia Vibration -> Sound -->
+  <path d="M 437.5 243 L 310 243 L 310 262" class="connection-green"/>
+
+  <!-- 5. OUTPUT: SOUND (In basso al centro, bilanciato) -->
+  <g transform="translate(210, 262)">
+    <rect class="box" width="200" height="40" fill="url(#soundGradient)" stroke="#059669" stroke-width="1.2"/>
+    <text x="100" y="25" class="label" font-size="14" text-anchor="middle">🔊 SOUND!</text>
+  </g>
+</svg>

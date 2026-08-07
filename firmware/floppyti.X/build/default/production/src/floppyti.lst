@@ -1,0 +1,1115 @@
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;=============================================================================
+                      00002 ; @(#)floppyti.asm  0.2  2014/04/23
+                      00003 ;   ________        _________________.________
+                      00004 ;  /  _____/  ____ /   _____/   __   \   ____/
+                      00005 ; /   \  ___ /  _ \\_____  \\____    /____  \
+                      00006 ; \    \_\  (  <_> )        \  /    //       \
+                      00007 ;  \______  /\____/_______  / /____//______  /
+                      00008 ;         \/              \/               \/
+                      00009 ; Copyright (c) 2014 by Alessandro Fraschetti.
+                      00010 ;
+                      00011 ; Description: floppyti. Floppy, fottiti!
+                      00012 ; Target.....: Microchip PIC 16F628A Microcontroller
+                      00013 ; Compiler...: Microchip Assembler (MPASM)
+                      00014 ; Note.......:
+                      00015 ;
+                      00016 ; MIT License
+                      00017 ; Permission is hereby granted, free of charge, to any person obtaining a copy
+                      00018 ; of this software and associated documentation files (the "Software"), to deal
+                      00019 ; in the Software without restriction, including without limitation the rights
+                      00020 ; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                      00021 ; copies of the Software, and to permit persons to whom the Software is
+                      00022 ; furnished to do so, subject to the following conditions:
+                      00023 ;
+                      00024 ; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                      00025 ; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                      00026 ; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                      00027 ; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                      00028 ; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                      00029 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                      00030 ; SOFTWARE.
+                      00031 ;=============================================================================
+                      00032 
+                      00033         processor   16f628a
+                      00034         #include    <p16f628a.inc>
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ; Build date : Jan 06 2020
+                      00005 ;  MPASM PIC16F628A processor include
+                      00006 ; 
+                      00007 ;  (c) Copyright 1999-2020 Microchip Technology, All rights reserved
+                      00008 ;==========================================================================
+                      00009 
+                      00386         LIST
+                      00035       ;  __config   _CP_OFF & _CPD_OFF & _BODEN_OFF & _LVP_OFF & _WDT_OFF & _PWRTE_ON & _HS_OSC
+                      00036       ;  __CONFIG   _CP_OFF & _DATA_CP_OFF & _LVP_OFF & _BOREN_OFF & _MCLRE_OFF & _WDT_OFF & _PWRTE_ON &
+                             _INTOSC_OSC_NOCLKOUT
+                      00037       ;  __CONFIG    _CP_OFF & _DATA_CP_OFF & _LVP_OFF & _BOREN_OFF & _WDT_OFF & _MCLRE_ON & _PWRTE_ON &
+                             _HS_OSC
+2007   3F02           00038         __CONFIG    _CP_OFF & _LVP_OFF & _BOREN_OFF & _WDT_OFF & _MCLRE_OFF & _PWRTE_ON & _HS_OSC
+                      00039                     ; _CP_[ON/OFF]    : code protect program memory enable/disable
+                      00040                     ; _CPD_[ON/OFF]   : code protect data memory enable/disable
+                      00041                     ; _LVP_[ON/OFF]   : Low Voltage ICSP enable/disable
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00042                     ; _BODEN_[ON/OFF] : Brown-Out Reset enable/disable
+                      00043                     ; _WDT_[ON/OFF]   : watchdog timer enable/disable
+                      00044                     ; _MCLRE_[ON/OFF] : MCLR pin function  digital IO/MCLR
+                      00045                     ; _PWRTE_[ON/OFF] : power-up timer enable/disable
+                      00046 ;=============================================================================
+                      00047 
+                      00048 ;=============================================================================
+                      00049 ;  Manifest constants
+                      00050 ;=============================================================================
+                      00051 ; FDD Consts
+  00000005            00052 FDD         equ     PORTA
+  00000002            00053 DIR         equ     RA2
+  00000003            00054 STEP        equ     RA3
+  00000004            00055 DRVSEL      equ     RA4
+  00000001            00056 FDDRANGE    equ     .1
+  0000005A            00057 HOMESTEPS   equ     .90
+  00000028            00058 CENTERSTEPS equ     .40
+                      00059 
+                      00060 
+                      00061 ; Config Consts
+  00000006            00062 DIPSW       equ     PORTB
+                      00063 
+                      00064 ; Midi Consts
+  00000006            00065 COMM        equ     PORTB
+  00000000            00066 IACTIVITY   equ     RB0
+  00000001            00067 IN          equ     RB1
+  00000003            00068 OACTIVITY   equ     RB3
+                      00069 
+                      00070 ; midiIOStatus Flags
+  00000000            00071 INDATA      equ     0x00
+  00000001            00072 OUTDATA     equ     0x01
+                      00073 
+                      00074 ; messageStatusByte Flags
+  00000000            00075 STATUSBYTE  equ     0x00
+  00000001            00076 DATABYTE1   equ     0x01
+  00000002            00077 DATABYTE2   equ     0x02
+  00000004            00078 NOTEON      equ     0x04
+                      00079 
+                      00080 ; fddStatus Flags
+  00000004            00081 DIRFLAG     equ     0x04
+                      00082 ;=============================================================================
+                      00083 
+                      00084 ;=============================================================================
+                      00085 ;  File register use
+                      00086 ;=============================================================================
+                      00087         cblock      h'20'
+  00000020            00088             w_temp                      ; variable used for context saving
+  00000021            00089             status_temp                 ; variable used for context saving
+  00000022            00090             pclath_temp                 ; variable used for context saving
+                      00091 
+  00000023            00092             d1, d2, d3                  ; delay routine vars
+  00000026            00093             d4
+                      00094 
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+  00000027            00095             midiInByte                  ; midi-in Byte Register
+  00000028            00096             midiIOStatus                ; midi-in/out Status Register
+  00000029            00097             midiInListenChannel         ; midi-in listen channel
+                      00098 
+  0000002A            00099             msgStatusByte               ; midi-in message: Status Byte Register
+  0000002B            00100             msgDataByte1                ; midi-in message: Data Byte 1 Register
+  0000002C            00101             msgDataByte2                ; midi-in message: Data Byte 2 Register
+  0000002D            00102             msgStatus                   ; midi-in message Status Register
+                      00103 
+  0000002E            00104             noteOnCounter               ; midi notes-on counter
+  0000002F            00105             noteToPlay                  ; midi note to play out
+                      00106 
+  00000030            00107             fddStatus                   ; fdd status register
+  00000031            00108             fddPos                      ; fdd head pos within the sweep range
+  00000032            00109             tickCounter                 ; counter for note task execution
+  00000033            00110             outputStatus                ; output (on/off) status register
+                      00111         endc
+                      00112 ;=============================================================================
+                      00113 
+                      00114 ;=============================================================================
+                      00115 ;  Start of code
+                      00116 ;=============================================================================
+                      00117 ;start
+                      00118         org         h'0000'             ; processor reset vector
+0000   2???           00119         goto        main                ; jump to the main routine
+                      00120 
+                      00121         org         h'0004'             ; interrupt vector location
+0004   00A0           00122         movwf       w_temp              ; save off current W register contents
+0005   0803           00123         movf        STATUS, W           ; move status register into W register
+0006   00A1           00124         movwf       status_temp         ; save off contents of STATUS register
+0007   080A           00125         movf        PCLATH, W           ; move pclath register into W register
+0008   00A2           00126         movwf       pclath_temp         ; save off contents of PCLATH register
+                      00127 
+                      00128         ; isr code can go here or be located as a call subroutine elsewhere
+                      00129 
+0009   0822           00130         movf        pclath_temp, W      ; retrieve copy of PCLATH register
+000A   008A           00131         movwf       PCLATH              ; restore pre-isr PCLATH register contents
+000B   0821           00132         movf        status_temp, W      ; retrieve copy of STATUS register
+000C   0083           00133         movwf       STATUS              ; restore pre-isr STATUS register contents
+000D   0EA0           00134         swapf       w_temp, F
+000E   0E20           00135         swapf       w_temp, W           ; restore pre-isr W register contents
+000F   0009           00136         retfie                          ; return from interrupt
+                      00137 ;=============================================================================
+                      00138 
+                      00139 ;=============================================================================
+                      00140 ;  Init I/O ports
+                      00141 ;=============================================================================
+0010                  00142 init_ports
+                      00143         errorlevel  -302
+                      00144 
+                      00145         ; set PORTA (RA0-RA7) as:
+                      00146         ;   RA2 Out=DIR, RA3 Out=STEP, RA4 Out=DRVSEL
+0010   1283           00147         bcf         STATUS, RP0             ; select Bank0
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0011   0185           00148         clrf        PORTA                   ; initialize PORTA by clearing output data latches
+0012   3007           00149         movlw       h'07'                   ; turn comparators off
+0013   009F           00150         movwf       CMCON                   ; and set port A mode I/O digital
+0014   1683           00151         bsf         STATUS, RP0             ; select Bank1
+0015   30E0           00152         movlw       b'11100000'             ; PORTA input/output
+0016   0085           00153         movwf       TRISA
+                      00154 
+                      00155         ; set PORTB (RB0-RB3) as:
+                      00156         ;   Out=IN Activity, In=MIDI-IN, Out= -, Out=OUT Activity
+                      00157         ; set PORTB (RB4-RB7) as:
+                      00158         ;   All-Input=MIDI-IN CHANNEL
+0017   1283           00159         bcf         STATUS, RP0             ; select Bank0
+0018   0186           00160         clrf        PORTB                   ; initialize PORTB by clearing output data latches
+0019   1683           00161         bsf         STATUS, RP0             ; select Bank1
+001A   30F2           00162         movlw       b'11110010'             ; PORTB input/output
+001B   0086           00163         movwf       TRISB
+                      00164 
+001C   1283           00165         bcf         STATUS, RP0             ; select Bank0
+                      00166 
+                      00167         errorlevel  +302
+                      00168 
+001D   0008           00169         return
+                      00170 ;=============================================================================
+                      00171 
+                      00172 ;=============================================================================
+                      00173 ;  Init USART
+                      00174 ;=============================================================================
+001E                  00175 init_usart
+                      00176         errorlevel  -302
+                      00177 
+001E   1683           00178         bsf         STATUS, RP0             ; select Bank1
+001F   3009           00179         movlw       h'09'                   ; 31250 bauds on 20MHz osc.
+0020   0099           00180         movwf       SPBRG
+0021   3000           00181         movlw       b'00000000'             ; async tx 8 bit
+0022   0098           00182         movwf       TXSTA
+0023   1283           00183         bcf         STATUS, RP0             ; return to page 0
+0024   3090           00184         movlw       b'10010000'             ; async rx 8 bit
+0025   0098           00185         movwf       RCSTA
+0026   1283           00186         bcf         STATUS, RP0             ; select Bank0
+                      00187 
+                      00188         errorlevel  +302
+                      00189 
+0027   0008           00190         return
+                      00191 ;=============================================================================
+                      00192 
+                      00193 ;=============================================================================
+                      00194 ;  Init Timer0 (internal clock source)
+                      00195 ;=============================================================================
+0028                  00196 init_timer
+                      00197         errorlevel  -302
+                      00198 
+                      00199         ; Clear the Timer0 registers
+0028   1283           00200         bcf         STATUS, RP0             ; select Bank0
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0029   0181           00201         clrf        TMR0                    ; clear module register
+                      00202 
+                      00203         ; Disable interrupts
+002A   128B           00204         bcf         INTCON, T0IE            ; mask timer interrupt
+                      00205 
+                      00206         ; Set the Timer0 control register
+002B   1683           00207         bsf         STATUS, RP0             ; select Bank1
+002C   3088           00208         movlw       b'10001000'             ; setup prescaler and timer
+002D   0081           00209         movwf       OPTION_REG
+002E   1283           00210         bcf         STATUS, RP0             ; select Bank0
+                      00211 
+                      00212         errorlevel  +302
+                      00213 
+002F   0008           00214         return
+                      00215 ;=============================================================================
+                      00216 
+                      00217 ;=============================================================================
+                      00218 ;  Midi Note -> Ticks Counter Decode Look-up Table
+                      00219 ;  timer=8bit, prescaler=1, Fosc=20MHz -> 256*1/(20000000/4) = 51.2us (19531.25Hz)
+                      00220 ;=============================================================================
+0030                  00221 note_to_ticks_decode
+0030   0782           00222         addwf       PCL, F
+0031                  00223 octave0
+0031   34FF           00224         retlw       d'255'  ; C0 (16.35Hz)
+0032   34FF           00225         retlw       d'255'  ; C#0 (17.32Hz)
+0033   34FF           00226         retlw       d'255'  ; D0 (18.35Hz)
+0034   34FF           00227         retlw       d'255'  ; D#0 (19.45Hz)
+0035   34FF           00228         retlw       d'255'  ; E0 (20.60Hz)
+0036   34FF           00229         retlw       d'255'  ; F0 (21.83Hz)
+0037   34FF           00230         retlw       d'255'  ; F#0 (23.12Hz)
+0038   34FF           00231         retlw       d'255'  ; G0 (24.50Hz)
+0039   34FF           00232         retlw       d'255'  ; G#0 (25.96Hz)
+003A   34FF           00233         retlw       d'255'  ; A0 (27.50Hz)
+003B   34FF           00234         retlw       d'255'  ; A#0 (29.14Hz)
+003C   34FF           00235         retlw       d'255'  ; B0 (30.87Hz)
+003D                  00236 octave1
+003D   34FF           00237         retlw       d'255'  ; C1 (32.70Hz)
+003E   34FF           00238         retlw       d'255'  ; C#1 (34.65Hz)
+003F   34FF           00239         retlw       d'255'  ; D1 (36.71Hz)
+0040   34FF           00240         retlw       d'255'  ; D#1 (38.89Hz)
+0041   34FF           00241         retlw       d'255'  ; E1 (41.20Hz)
+0042   34FF           00242         retlw       d'255'  ; F1 (43.65Hz)
+0043   34FF           00243         retlw       d'255'  ; F#1 (46.25Hz)
+0044   34FF           00244         retlw       d'255'  ; G1 (49.00Hz)
+0045   34FF           00245         retlw       d'255'  ; G#1 (51.91Hz)
+0046   34FF           00246         retlw       d'255'  ; A1 (55.00Hz)
+0047   34FF           00247         retlw       d'255'  ; A#1 (58.27Hz)
+0048   34FF           00248         retlw       d'255'  ; B1 (61.74Hz)
+0049                  00249 octave2
+0049   34FF           00250         retlw       d'255'  ; C2 (65.41Hz)
+004A   34FF           00251         retlw       d'255'  ; C#2 (69.30Hz)
+004B   34FF           00252         retlw       d'255'  ; D2 (73.42Hz)
+004C   34FB           00253         retlw       d'251'  ; D#2 (77.78Hz)
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+004D   34ED           00254         retlw       d'237'  ; E2 (82.41Hz)
+004E   34E0           00255         retlw       d'224'  ; F2 (87.31Hz)
+004F   34D3           00256         retlw       d'211'  ; F#2 (92.50Hz)
+0050   34C7           00257         retlw       d'199'  ; G2 (98.00Hz)
+0051   34BC           00258         retlw       d'188'  ; G#2 (103.83Hz)
+0052   34B2           00259         retlw       d'178'  ; A2 (110.00Hz)
+0053   34A8           00260         retlw       d'168'  ; A#2 (116.54Hz)
+0054   349E           00261         retlw       d'158'  ; B2 (123.47Hz)
+0055                  00262 octave3
+0055   3495           00263         retlw       d'149'  ; C3 (130.81Hz)
+0056   348D           00264         retlw       d'141'  ; C#3 (138.59Hz)
+0057   3485           00265         retlw       d'133'  ; D3 (146.83Hz)
+0058   347E           00266         retlw       d'126'  ; D#3 (155.56Hz)
+0059   3477           00267         retlw       d'119'  ; E3 (164.81Hz)
+005A   3470           00268         retlw       d'112'  ; F3 (174.61Hz)
+005B   346A           00269         retlw       d'106'  ; F#3 (185.00Hz)
+005C   3464           00270         retlw       d'100'  ; G3 (196.00Hz)
+005D   345E           00271         retlw       d'94'   ; G#3 (207.65Hz)
+005E   3459           00272         retlw       d'89'   ; A3 (220.00Hz)
+005F   3454           00273         retlw       d'84'   ; A#3 (233.08Hz)
+0060   344F           00274         retlw       d'79'   ; B3 (246.94Hz)
+0061                  00275 octave4
+0061   344B           00276         retlw       d'75'   ; C4 (261.63Hz)
+0062   3446           00277         retlw       d'70'   ; C#4 (277.18Hz)
+0063   3443           00278         retlw       d'67'   ; D4 (293.66Hz)
+0064   343F           00279         retlw       d'63'   ; D#4 (311.13Hz)
+0065   343B           00280         retlw       d'59'   ; E4 (329.63Hz)
+0066   3438           00281         retlw       d'56'   ; F4 (349.23Hz)
+0067   3435           00282         retlw       d'53'   ; F#4 (369.99Hz)
+0068   3432           00283         retlw       d'50'   ; G4 (392.00Hz)
+0069   342F           00284         retlw       d'47'   ; G#4 (415.30Hz)
+006A   342C           00285         retlw       d'44'   ; A4 (440.00Hz)
+006B   342A           00286         retlw       d'42'   ; A#4 (466.16Hz)
+006C   3428           00287         retlw       d'40'   ; B4 (493.88Hz)
+006D                  00288 octave5
+006D   3425           00289         retlw       d'37'   ; C5 (523.25Hz)
+006E   3423           00290         retlw       d'35'   ; C#5 (554.37Hz)
+006F   3421           00291         retlw       d'33'   ; D5 (587.33Hz)
+0070   341F           00292         retlw       d'31'   ; D#5 (622.25Hz)
+0071   341E           00293         retlw       d'30'   ; E5 (659.26Hz)
+0072   341C           00294         retlw       d'28'   ; F5 (698.46Hz)
+0073   341A           00295         retlw       d'26'   ; F#5 (739.99Hz)
+0074   3419           00296         retlw       d'25'   ; G5 (783.99Hz)
+0075   3418           00297         retlw       d'24'   ; G#5 (830.61Hz)
+0076   3416           00298         retlw       d'22'   ; A5 (880.00Hz)
+0077   3415           00299         retlw       d'21'   ; A#5 (932.33Hz)
+0078   3414           00300         retlw       d'20'   ; B5 (987.77Hz)
+0079                  00301 octave6
+0079   3413           00302         retlw       d'19'   ; C6 (1046.50Hz)
+007A   3412           00303         retlw       d'18'   ; C#6 (1108.73Hz)
+007B   3411           00304         retlw       d'17'   ; D6 (1174.66Hz)
+007C   3410           00305         retlw       d'16'   ; D#6 (1244.51Hz)
+007D   340F           00306         retlw       d'15'   ; E6 (1318.51Hz)
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+007E   340E           00307         retlw       d'14'   ; F6 (1396.91Hz)
+007F   340D           00308         retlw       d'13'   ; F#6 (1479.98Hz)
+0080   340C           00309         retlw       d'12'   ; G6 (1567.98Hz)
+0081   340C           00310         retlw       d'12'   ; G#6 (1661.22Hz)
+0082   340B           00311         retlw       d'11'   ; A6 (1760.00Hz)
+0083   340A           00312         retlw       d'10'   ; A#6 (1864.66Hz)
+0084   340A           00313         retlw       d'10'   ; B6 (1975.53Hz)
+0085                  00314 octave7                     ; same as octave6
+0085   3413           00315         retlw       d'19'
+0086   3412           00316         retlw       d'18'
+0087   3411           00317         retlw       d'17'
+0088   3410           00318         retlw       d'16'
+0089   340F           00319         retlw       d'15'
+008A   340E           00320         retlw       d'14'
+008B   340D           00321         retlw       d'13'
+008C   340C           00322         retlw       d'12'
+008D   340C           00323         retlw       d'12'
+008E   340B           00324         retlw       d'11'
+008F   340A           00325         retlw       d'10'
+0090   340A           00326         retlw       d'10'
+0091                  00327 octave8                     ; same as octave6
+0091   3413           00328         retlw       d'19'
+0092   3412           00329         retlw       d'18'
+0093   3411           00330         retlw       d'17'
+0094   3410           00331         retlw       d'16'
+0095   340F           00332         retlw       d'15'
+0096   340E           00333         retlw       d'14'
+0097   340D           00334         retlw       d'13'
+0098   340C           00335         retlw       d'12'
+0099   340C           00336         retlw       d'12'
+009A   340B           00337         retlw       d'11'
+009B   340A           00338         retlw       d'10'
+009C   340A           00339         retlw       d'10'
+009D                  00340 octave9                     ; same as octave6
+009D   3413           00341         retlw       d'19'
+009E   3412           00342         retlw       d'18'
+009F   3411           00343         retlw       d'17'
+00A0   3410           00344         retlw       d'16'
+00A1   340F           00345         retlw       d'15'
+00A2   340E           00346         retlw       d'14'
+00A3   340D           00347         retlw       d'13'
+00A4   340C           00348         retlw       d'12'
+00A5   340C           00349         retlw       d'12'
+00A6   340B           00350         retlw       d'11'
+00A7   340A           00351         retlw       d'10'
+00A8   340A           00352         retlw       d'10'
+00A9                  00353 octave10                    ; same as octave6
+00A9   3413           00354         retlw       d'19'
+00AA   3412           00355         retlw       d'18'
+00AB   3411           00356         retlw       d'17'
+00AC   3410           00357         retlw       d'16'
+00AD   340F           00358         retlw       d'15'
+00AE   340E           00359         retlw       d'14'
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00AF   340D           00360         retlw       d'13'
+00B0   340C           00361         retlw       d'12'
+                      00362 ;=============================================================================
+                      00363 
+                      00364 ;=============================================================================
+                      00365 ;  Delay routines
+                      00366 ;=============================================================================
+00B1                  00367 delay1ms
+00B1   30C6           00368         movlw       0xC6                    ; 993 cycles
+00B2   00A3           00369         movwf       d1
+00B3   3001           00370         movlw       0x01
+00B4   00A4           00371         movwf       d2
+00B5                  00372 delay1ms_0
+00B5   0BA3           00373         decfsz      d1, f
+00B6   2???           00374         goto        $+2
+00B7   0BA4           00375         decfsz      d2, f
+00B8   2???           00376         goto        delay1ms_0
+00B9   2???           00377         goto        $+1                     ; 3 cycles
+00BA   0000           00378         nop
+00BB   0008           00379         return                              ; 4 cycles (including call)
+                      00380 ;=============================================================================
+00BC                  00381 delay500ms                                  ;2499992 cycles
+00BC   3015           00382         movlw       0x15
+00BD   00A3           00383         movwf       d1
+00BE   3074           00384         movlw       0x74
+00BF   00A4           00385         movwf       d2
+00C0   3006           00386         movlw       0x06
+00C1   00A5           00387         movwf       d3
+00C2                  00388 delay500ms_0
+00C2   0BA3           00389         decfsz      d1, f
+00C3   2???           00390         goto        $+2
+00C4   0BA4           00391         decfsz      d2, f
+00C5   2???           00392         goto        $+2
+00C6   0BA5           00393         decfsz      d3, f
+00C7   2???           00394         goto        delay500ms_0
+00C8   2???           00395         goto        $+1                    ;4 cycles
+00C9   2???           00396         goto        $+1
+00CA   0000           00397         nop
+00CB   0008           00398         return                             ;4 cycles (including call)
+                      00399 ;=============================================================================
+                      00400 
+                      00401 ;=============================================================================
+                      00402 ;  FDD Routines
+                      00403 ;=============================================================================
+00CC                  00404 center_fdd
+00CC   305A           00405         movlw       HOMESTEPS
+00CD   00A6           00406         movwf       d4
+00CE                  00407 home_loop
+00CE   2???           00408         call        step_out
+00CF   2???           00409         call        delay1ms
+00D0   2???           00410         call        delay1ms
+00D1   0BA6           00411         decfsz      d4, F
+00D2   2???           00412         goto        home_loop
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00D3   2???           00413         call        delay1ms
+00D4   3028           00414         movlw       CENTERSTEPS
+00D5   00A6           00415         movwf       d4
+00D6                  00416 center_loop
+00D6   2???           00417         call        step_in
+00D7   2???           00418         call        delay1ms
+00D8   2???           00419         call        delay1ms
+00D9   0BA6           00420         decfsz      d4, F
+00DA   2???           00421         goto        center_loop
+00DB   01B1           00422         clrf        fddPos
+00DC   1230           00423         bcf         fddStatus, DIRFLAG
+00DD   0008           00424         return
+                      00425 
+                      00426 ;=============================================================================
+00DE                  00427 step_out
+00DE   1105           00428         bcf         FDD, DIR                ; DIR=0 -> to track 0
+00DF   0000           00429         nop
+00E0   0000           00430         nop
+00E1   1585           00431         bsf         FDD, STEP
+00E2   0000           00432         nop
+00E3   0000           00433         nop
+00E4   0000           00434         nop
+00E5   0000           00435         nop
+00E6   0000           00436         nop
+00E7   0000           00437         nop
+00E8   1185           00438         bcf         FDD, STEP
+00E9   0008           00439         return
+                      00440 ;=============================================================================
+00EA                  00441 step_in
+00EA   1505           00442         bsf         FDD, DIR                ; DIR=1 -> to track 80
+00EB   0000           00443         nop
+00EC   0000           00444         nop
+00ED   1585           00445         bsf         FDD, STEP
+00EE   0000           00446         nop
+00EF   0000           00447         nop
+00F0   0000           00448         nop
+00F1   0000           00449         nop
+00F2   0000           00450         nop
+00F3   0000           00451         nop
+00F4   1185           00452         bcf         FDD, STEP
+00F5   0008           00453         return
+                      00454 ;=============================================================================
+                      00455 
+                      00456 ;=============================================================================
+                      00457 ;  Tasks Routines
+                      00458 ;=============================================================================
+00F6                  00459 scan_midi_in_listen_channel
+00F6   0E06           00460         swapf       DIPSW, W
+00F7   390F           00461         andlw       b'00001111'
+00F8   00A9           00462         movwf       midiInListenChannel
+00F9   0008           00463         return
+                      00464 ;=============================================================================
+00FA                  00465 scan_midi_in_data
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00FA   1028           00466         bcf         midiIOStatus, INDATA    ; clear midi-in status flag
+00FB   1C98           00467         btfss       RCSTA, OERR
+00FC   2???           00468         goto        $+3
+00FD   1218           00469         bcf         RCSTA, CREN
+00FE   1618           00470         bsf         RCSTA, CREN
+00FF   1E8C           00471         btfss       PIR1, RCIF              ; test for incoming data
+0100   0008           00472         return
+0101   1406           00473         bsf         COMM, IACTIVITY         ; turn on activity led
+0102   081A           00474         movf        RCREG, W                ; set midi-in Byte Register
+0103   00A7           00475         movwf       midiInByte              ;
+0104   1428           00476         bsf         midiIOStatus, INDATA    ; set midi-in status flag
+0105   1006           00477         bcf         COMM, IACTIVITY         ; turn off activity led
+0106   0008           00478         return
+                      00479 ;=============================================================================
+0107                  00480 create_midi_in_message
+0107   0827           00481         movf        midiInByte, W           ; test for statusbyte
+0108   3980           00482         andlw       b'10000000'
+0109   3C80           00483         sublw       b'10000000'
+010A   1903           00484         btfsc       STATUS, Z
+010B   2???           00485         goto        check_statusbyte        ;  is statusbyte, check data
+010C   1C2D           00486         btfss       msgStatus, STATUSBYTE   ; test for statusbyte
+010D   0008           00487         return
+010E   1CAD           00488         btfss       msgStatus, DATABYTE1    ; test for databyte
+010F   2???           00489         goto        check_databyte1         ;  is databyte1, check data
+0110   2???           00490         goto        check_databyte2         ;  is databyte2, check data
+0111                  00491 check_statusbyte
+0111   0827           00492         movf        midiInByte, W           ; test midi listen channel
+0112   390F           00493         andlw       b'00001111'
+0113   0229           00494         subwf       midiInListenChannel, W
+0114   1D03           00495         btfss       STATUS, Z
+0115   0000           00496         nop         ;   goto        check_others
+0116   01AA           00497         clrf        msgStatusByte
+0117   10AD           00498         bcf         msgStatus, DATABYTE1
+0118   112D           00499         bcf         msgStatus, DATABYTE2
+0119   0827           00500         movf        midiInByte, W           ; save midi byte on data register
+011A   39F0           00501         andlw       b'11110000'
+011B   00AA           00502         movwf       msgStatusByte
+011C                  00503 check_note_on
+011C   082A           00504         movf        msgStatusByte, W        ; test for note on
+011D   3C90           00505         sublw       b'10010000'
+011E   1D03           00506         btfss       STATUS, Z
+011F   2???           00507         goto        check_note_off
+0120   142D           00508         bsf         msgStatus, STATUSBYTE
+0121   162D           00509         bsf         msgStatus, NOTEON
+0122   0008           00510         return
+0123                  00511 check_note_off
+0123   082A           00512         movf        msgStatusByte, W        ; test for note off
+0124   3C80           00513         sublw       b'10000000'
+0125   1D03           00514         btfss       STATUS, Z
+0126   2???           00515         goto        check_others
+0127   142D           00516         bsf         msgStatus, STATUSBYTE
+0128   122D           00517         bcf         msgStatus, NOTEON
+0129   0008           00518         return
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE 11
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+012A                  00519 check_others
+012A   01AD           00520         clrf        msgStatus
+012B   0008           00521         return
+012C                  00522 check_databyte1
+012C   0827           00523         movf        midiInByte, W           ; save midi byte on data
+012D   00AB           00524         movwf       msgDataByte1            ; and status registers
+012E   14AD           00525         bsf         msgStatus, DATABYTE1
+012F   0008           00526         return
+0130                  00527 check_databyte2
+0130   0827           00528         movf        midiInByte, W           ; save midi byte on data
+0131   00AC           00529         movwf       msgDataByte2            ; and status registers
+0132   152D           00530         bsf         msgStatus, DATABYTE2
+0133   0008           00531         return
+                      00532 ;=============================================================================
+0134                  00533 parse_midi_in_message
+0134   1CAD           00534         btfss       msgStatus, DATABYTE1    ; check if message is complete
+0135   0008           00535         return
+0136   1D2D           00536         btfss       msgStatus, DATABYTE2
+0137   0008           00537         return
+0138   1E2D           00538         btfss       msgStatus, NOTEON       ; check message type
+0139   2???           00539         goto        parse_note_off
+013A   08AC           00540         movf        msgDataByte2, F
+013B   1903           00541         btfsc       STATUS, Z
+013C   2???           00542         goto        parse_note_off
+013D                  00543 parse_note_on
+013D   10AD           00544         bcf         msgStatus, DATABYTE1
+013E   112D           00545         bcf         msgStatus, DATABYTE2
+013F   0AAE           00546         incf        noteOnCounter, F        ; do note on
+0140   082B           00547         movf        msgDataByte1, W
+0141   00AF           00548         movwf       noteToPlay
+0142   2???           00549         call        note_to_ticks_decode
+0143   00B2           00550         movwf       tickCounter
+0144   0008           00551         return
+0145                  00552 parse_note_off
+0145   10AD           00553         bcf         msgStatus, DATABYTE1
+0146   112D           00554         bcf         msgStatus, DATABYTE2
+0147   08AE           00555         movf        noteOnCounter, F
+0148   1D03           00556         btfss       STATUS, Z
+0149   0BAE           00557         decfsz      noteOnCounter, F        ; do note off
+014A   0008           00558         return
+014B   01AF           00559         clrf        noteToPlay
+014C   0008           00560         return
+                      00561 ;=============================================================================
+014D                  00562 output_fdd_note
+                      00563 ;        btfsc       fddStatus, DIRFLAG
+                      00564 ;        goto        $+4
+                      00565 ;        call        step_in
+                      00566 ;        bsf         fddStatus, DIRFLAG
+                      00567 ;        goto        $+3
+                      00568 ;        call        step_out
+                      00569 ;        bcf         fddStatus, DIRFLAG
+                      00570 ;        return
+014D   1A30           00571         btfsc       fddStatus, DIRFLAG
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE 12
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+014E   2???           00572         goto        moving_in
+014F                  00573 moving_out
+014F   2???           00574         call        step_out                ; one step further out
+0150   0AB1           00575         incf        fddPos, F
+0151   3001           00576         movlw       FDDRANGE
+0152   0231           00577         subwf       fddPos, W
+0153   1D03           00578         btfss       STATUS, Z               ; reached the outer limit?
+0154   0008           00579         return
+0155   1630           00580         bsf         fddStatus, DIRFLAG      ; reverse dir for next call
+0156   0008           00581         return
+0157                  00582 moving_in
+0157   2???           00583         call        step_in                 ; one step back in
+0158   08B1           00584         movf        fddPos, F
+0159   1903           00585         btfsc       STATUS, Z               ; already at 0? (safety)
+015A   2???           00586         goto        at_zero
+015B   03B1           00587         decf        fddPos, F
+015C   08B1           00588         movf        fddPos, F
+015D   1D03           00589         btfss       STATUS, Z               ; reached the inner limit (0)?
+015E   0008           00590         return
+015F                  00591 at_zero
+015F   1230           00592         bcf         fddStatus, DIRFLAG      ; reverse dir for next call
+0160   0008           00593         return
+                      00594 ;=============================================================================
+                      00595 
+                      00596 ;=============================================================================
+                      00597 ;  main routine
+                      00598 ;=============================================================================
+0161                  00599 main
+0161   2???           00600         call        init_ports              ; init devices
+                      00601 
+0162   01AD           00602         clrf        msgStatus               ; clean data and status registers
+0163   01AA           00603         clrf        msgStatusByte
+0164   01AB           00604         clrf        msgDataByte1
+0165   01AC           00605         clrf        msgDataByte2
+0166   01A8           00606         clrf        midiIOStatus
+0167   01A7           00607         clrf        midiInByte
+0168   01AF           00608         clrf        noteToPlay
+0169   01AE           00609         clrf        noteOnCounter
+016A   1605           00610         bsf         FDD, DRVSEL
+                      00611 
+016B                  00612 post
+016B   2???           00613         call        delay500ms
+016C   1406           00614         bsf         COMM, IACTIVITY
+016D   1586           00615         bsf         COMM, OACTIVITY
+016E   1205           00616         bcf         FDD, DRVSEL
+016F   2???           00617         call        delay500ms
+0170   2???           00618         call        center_fdd
+0171   2???           00619         call        delay500ms
+0172   1006           00620         bcf         COMM, IACTIVITY
+0173   1186           00621         bcf         COMM, OACTIVITY
+                      00622 ;        bsf         FDD, DRVSEL
+                      00623 
+0174   2???           00624         call        init_usart
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE 13
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0175   2???           00625         call        init_timer
+                      00626 
+                      00627 ;==== tasks scheduler ========================================================
+0176                  00628 schedulerloop
+0176   1D0B           00629         btfss       INTCON, T0IF            ; timer overflow (51.2us)?
+0177   2???           00630         goto        schedulerloop           ; no, loop!
+0178   110B           00631         bcf         INTCON, T0IF            ; reset overflow flag
+                      00632 
+                      00633 ; --  scan input -------------------------------------------------------------
+0179                  00634 task1
+0179   2???           00635         call        scan_midi_in_listen_channel
+017A   2???           00636         call        scan_midi_in_data
+                      00637 
+                      00638 ; --  parse midi-in data -----------------------------------------------------
+017B                  00639 task2
+017B   1828           00640         btfsc       midiIOStatus, INDATA
+017C   2???           00641         call        create_midi_in_message
+017D   182D           00642         btfsc       msgStatus, STATUSBYTE
+017E   2???           00643         call        parse_midi_in_message
+                      00644 
+                      00645 ; --  fdd activity led -------------------------------------------------------
+017F                  00646 task3
+017F   08AF           00647         movf        noteToPlay, F
+0180   1903           00648         btfsc       STATUS, Z
+0181   2???           00649         goto        $+3
+0182   1586           00650         bsf         COMM, OACTIVITY
+0183   2???           00651         goto        task4
+0184   1186           00652         bcf         COMM, OACTIVITY
+0185   2???           00653         goto        endloop
+                      00654 
+                      00655 ; --  fdd output note --------------------------------------------------------
+0186                  00656 task4
+0186   08AF           00657         movf        noteToPlay, F
+0187   1903           00658         btfsc       STATUS, Z
+0188   2???           00659         goto        endloop
+0189   0BB2           00660         decfsz      tickCounter, F          ; countdown and test
+018A   2???           00661         goto        endloop                 ; not time yet
+018B   082F           00662         movf        noteToPlay, W
+018C   2???           00663         call        note_to_ticks_decode    ; decode databyte to ticks
+018D   00B2           00664         movwf       tickCounter             ; reset counter
+018E   2???           00665         call        output_fdd_note         ; play note
+                      00666 
+018F                  00667 endloop
+018F   2???           00668         goto        schedulerloop
+                      00669 
+                      00670 ;==== tasks scheduler ========================================================
+3F02                  00671         end
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE 14
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ADDEN                             00000003
+ADEN                              00000003
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCPR1                             00000015
+CCPR1H                            00000016
+CCPR1L                            00000015
+CENTERSTEPS                       00000028
+CIS                               00000003
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000001F
+CMIE                              00000006
+CMIF                              00000006
+COMM                              00000006
+CREN                              00000004
+CSRC                              00000007
+DATABYTE1                         00000001
+DATABYTE2                         00000002
+DATA_CP_OFF                       00003FFF
+DATA_CP_ON                        00003EFF
+DC                                00000001
+DIPSW                             00000006
+DIR                               00000002
+DIRFLAG                           00000004
+DRVSEL                            00000004
+EEADR                             0000009B
+EECON1                            0000009C
+EECON2                            0000009D
+EEDATA                            0000009A
+EEIE                              00000007
+EEIF                              00000007
+F                                 00000001
+FDD                               00000005
+FDDRANGE                          00000001
+FERR                              00000002
+FSR                               00000004
+GIE                               00000007
+HOMESTEPS                         0000005A
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE 15
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+IACTIVITY                         00000000
+IN                                00000001
+INDATA                            00000000
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+NOTEON                            00000004
+NOT_BO                            00000000
+NOT_BOD                           00000000
+NOT_BOR                           00000000
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+OACTIVITY                         00000003
+OERR                              00000001
+OPTION_REG                        00000081
+OSCF                              00000003
+OUTDATA                           00000001
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PIE1                              0000008C
+PIR1                              0000000C
+PORTA                             00000005
+PORTB                             00000006
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RA5                               00000005
+RA6                               00000006
+RA7                               00000007
+RB0                               00000000
+RB1                               00000001
+RB2                               00000002
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE 16
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RBIF                              00000000
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+RX9                               00000006
+RX9D                              00000000
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+STATUS                            00000003
+STATUSBYTE                        00000000
+STEP                              00000003
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1OSCEN                           00000003
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TMR1                              0000000E
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISA5                            00000005
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE 17
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TRISA6                            00000006
+TRISA7                            00000007
+TRISB                             00000086
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+TRMT                              00000001
+TX9                               00000006
+TX9D                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+VR0                               00000000
+VR1                               00000001
+VR2                               00000002
+VR3                               00000003
+VRCON                             0000009F
+VREN                              00000007
+VROE                              00000006
+VRR                               00000005
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_.org_1_00B6                      000000B6
+_.org_1_00B9                      000000B9
+_.org_1_00C3                      000000C3
+_.org_1_00C5                      000000C5
+_.org_1_00C8                      000000C8
+_.org_1_00C9                      000000C9
+_.org_1_00FC                      000000FC
+_.org_1_0181                      00000181
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+_CONFIG                           00002007
+_CPD_OFF                          00003FFF
+_CPD_ON                           00003EFF
+_CP_OFF                           00003FFF
+_CP_ON                            00001FFF
+_DEVID1                           00002006
+_ER_OSC_CLKOUT                    00003FFF
+_ER_OSC_NOCLKOUT                  00003FFE
+_EXTCLK_OSC                       00003FEF
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE 18
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_FOSC_ECIO                        00003FEF
+_FOSC_EXTRCCLK                    00003FFF
+_FOSC_EXTRCIO                     00003FFE
+_FOSC_HS                          00003FEE
+_FOSC_INTOSCCLK                   00003FFD
+_FOSC_INTOSCIO                    00003FFC
+_FOSC_LP                          00003FEC
+_FOSC_XT                          00003FED
+_HS_OSC                           00003FEE
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_INTOSC_OSC_CLKOUT                00003FFD
+_INTOSC_OSC_NOCLKOUT              00003FFC
+_INTRC_OSC_CLKOUT                 00003FFD
+_INTRC_OSC_NOCLKOUT               00003FFC
+_LP_OSC                           00003FEC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_MCLRE_OFF                        00003FDF
+_MCLRE_ON                         00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC_CLKOUT                    00003FFF
+_RC_OSC_NOCLKOUT                  00003FFE
+_WDTE_OFF                         00003FFB
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FED
+__16F628A                         00000001
+at_zero                           0000015F
+center_fdd                        000000CC
+center_loop                       000000D6
+check_databyte1                   0000012C
+check_databyte2                   00000130
+check_note_off                    00000123
+check_note_on                     0000011C
+check_others                      0000012A
+check_statusbyte                  00000111
+create_midi_in_message            00000107
+d1                                00000023
+d2                                00000024
+d3                                00000025
+d4                                00000026
+delay1ms                          000000B1
+delay1ms_0                        000000B5
+delay500ms                        000000BC
+delay500ms_0                      000000C2
+endloop                           0000018F
+fddPos                            00000031
+fddStatus                         00000030
+MPASM 5.87                      FLOPPYTI.ASM   8-7-2026  13:06:17         PAGE 19
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+home_loop                         000000CE
+init_ports                        00000010
+init_timer                        00000028
+init_usart                        0000001E
+main                              00000161
+midiIOStatus                      00000028
+midiInByte                        00000027
+midiInListenChannel               00000029
+moving_in                         00000157
+moving_out                        0000014F
+msgDataByte1                      0000002B
+msgDataByte2                      0000002C
+msgStatus                         0000002D
+msgStatusByte                     0000002A
+noteOnCounter                     0000002E
+noteToPlay                        0000002F
+note_to_ticks_decode              00000030
+octave0                           00000031
+octave1                           0000003D
+octave10                          000000A9
+octave2                           00000049
+octave3                           00000055
+octave4                           00000061
+octave5                           0000006D
+octave6                           00000079
+octave7                           00000085
+octave8                           00000091
+octave9                           0000009D
+outputStatus                      00000033
+output_fdd_note                   0000014D
+parse_midi_in_message             00000134
+parse_note_off                    00000145
+parse_note_on                     0000013D
+pclath_temp                       00000022
+post                              0000016B
+scan_midi_in_data                 000000FA
+scan_midi_in_listen_channel       000000F6
+schedulerloop                     00000176
+status_temp                       00000021
+step_in                           000000EA
+step_out                          000000DE
+task1                             00000179
+task2                             0000017B
+task3                             0000017F
+task4                             00000186
+tickCounter                       00000032
+w_temp                            00000020
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     0 reported,     5 suppressed
+
+
